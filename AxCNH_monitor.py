@@ -66,8 +66,10 @@ def __main__():
     api = ConfluxScan()
     # 获取代币供应量
     AxCNH_supply=api.get_token_supply(AxCNH_contract_address)
+    print(f"AxCNH代币供应量:{AxCNH_supply}")
     # 获取现存已知的受信账户代币的余额
     AxCNH_bank_balance=api.get_token_banlance(bank_address,AxCNH_contract_address)
+    print(f"AxCNH代币收信账户余额:{AxCNH_bank_balance}")
     data_file = DataFile()
     result = data_file.read()
     class Num_Format:
