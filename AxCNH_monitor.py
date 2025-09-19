@@ -7,6 +7,7 @@ from typing import TypedDict
 import os
 import json
 import requests
+from .Notify import BarkNotify
 import sys, traceback
 class Data(TypedDict):
     """
@@ -45,22 +46,6 @@ class DataFile:
             os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
         with open(self.file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
-class Notify:
-    def __init__(self):
-        self.notify_api = os.environ.get('NOTIFY_API')
-    def send_notify(self, title, body, url=None):
-        '''
-            发送推送
-        '''
-        data = {
-            'title': title,
-            'body': body,
-            'level' : 'critical',
-            'group': 'AxCNH',
-            'isArchive' : 1,
-            'url': url
-        }
-        requests.post(self.notify_api, data=data)
 if __name__ == "__main__":
     try:
         AxCNH_contract_address = '0x70bfd7f7eadf9b9827541272589a6b2bb760ae2e'
@@ -97,15 +82,14 @@ if __name__ == "__main__":
                     return num_str
         
         if result:
-            notify = Notify()
             if result.get('AxCNH_supply') != AxCNH_supply:
                 old_formatted = Num_Format.format_number(result.get('AxCNH_supply'))
                 new_formatted = Num_Format.format_number(AxCNH_supply)
-                notify.send_notify('代币总供应量出现变动', f'从 {old_formatted} 变更为 {new_formatted}',url=f'https://evm.confluxscan.org/token/{AxCNH_contract_address}')
+                BarkNotify.send_notify('代币总供应量出现变动', f'从 {old_formatted} 变更为 {new_formatted}',group='AxCNH',url=f'https://evm.confluxscan.org/token/{AxCNH_contract_address}')
             if result.get('AxCNH_bank_balance') != AxCNH_bank_balance:
                 old_formatted = Num_Format.format_number(result.get('AxCNH_bank_balance'))
                 new_formatted = Num_Format.format_number(AxCNH_bank_balance)
-                notify.send_notify('授权银行余额出现变动',f'从 {old_formatted} 变更为 {new_formatted}',url=f'https://evm.confluxscan.org/address/{bank_address}')
+                BarkNotify.send_notify('授权银行余额出现变动',f'从 {old_formatted} 变更为 {new_formatted}',group='AxCNH',url=f'https://evm.confluxscan.org/address/{bank_address}')
 
         
         file_result = {
