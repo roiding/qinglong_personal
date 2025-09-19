@@ -2,7 +2,7 @@ import requests
 import os
 class BarkNotify:
     @staticmethod
-    def send_notify(self, title, body, group=None,url=None):
+    def send_notify(title, body, group=None,url=None):
         '''
             发送推送
         '''

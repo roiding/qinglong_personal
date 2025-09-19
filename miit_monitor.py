@@ -22,7 +22,7 @@ def miit_monitor(model):
             licenseNo = i.get('licenseNo')
             acceptId = i.get('acceptId')
             print(f'设备{model}已获取入网证书：{licenseNo},批准编号为：{acceptId}')
-            BarkNotify().send_notify(f'{model}已获取入网证书',f'设备{model}已获取入网证书：{licenseNo},批准编号为：{acceptId}',group='miit_monitor',url=f'https://jwxk.miit.gov.cn/showPhotos?lic={licenseNo}&acceptId={acceptId}')
+            BarkNotify.send_notify(f'{model}已获取入网证书',f'设备{model}已获取入网证书：{licenseNo},批准编号为：{acceptId}',group='miit_monitor',url=f'https://jwxk.miit.gov.cn/showPhotos?lic={licenseNo}&acceptId={acceptId}')
         QLUtils.disable_self()
 
 if __name__ == '__main__':
