@@ -1,3 +1,7 @@
+# cron: */10 * * * *
+# new Env('AxCNH监控脚本')
+
+
 # 监控AxCNH的监管账号的余额变更
 from typing import TypedDict
 import os
