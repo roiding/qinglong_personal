@@ -21,6 +21,9 @@ def miit_monitor(model):
 
 if __name__ == '__main__':
     miit_model=os.environ.get("miit_model")
+    # 部署有前缀的话，需要适配 
+    if os.environ.get("QlBaseUrl") is not None:
+        QLUtils.set_config(host=f'http://127.0.0.1:5700{os.environ.get("QlBaseUrl")}/open')
     if miit_model is None:
         QLUtils.disable_self()
     else:
