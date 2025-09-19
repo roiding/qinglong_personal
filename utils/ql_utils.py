@@ -5,7 +5,7 @@ import inspect
 
 class QLUtils:
     # 青龙面板默认配置
-    _QL_HOST = "http://127.0.0.1:5700"
+    _QL_HOST = "http://127.0.0.1:5700/open"
     _CONFIG_PATH = "/ql/data/config/auth.json"
 
     @staticmethod
@@ -42,13 +42,13 @@ class QLUtils:
     def _get_script_id(token, script_name):
         """内部方法：获取脚本ID"""
         try:
-            url = f"{QLUtils._QL_HOST}/api/crons"
+            url = f"{QLUtils._QL_HOST}/crons"
             headers = {
                 "Authorization": f"Bearer {token}",
                 "Content-Type": "application/json"
             }
             response = requests.get(url, headers=headers)
-            crons = response.json().get("data", [])
+            crons = response.json().get("data", []).get("data", [])
 
             for cron in crons:
                 if os.path.basename(cron.get("command", "")) == script_name:
