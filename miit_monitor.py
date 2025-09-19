@@ -7,6 +7,7 @@ from utils.ql_utils import QLUtils
 import os
 import requests
 from  utils.notify_utils import BarkNotify
+import traceback,sys
 def miit_monitor(model): 
     url=f'https://jwxk.miit.gov.cn/dev-api-20/internetService/CertificateQuery?equipmentModel={model}&sort=desc&pageNo=1&pageSize=10&isphoto=1&licenseNo=&equipmentCategory=&applyOrg=&manufacturingEnterpriseCname=&equipmentName=&startDate=&endDate='
     result=requests.get(url).json()
@@ -20,12 +21,16 @@ def miit_monitor(model):
         QLUtils.disable_self()
 
 if __name__ == '__main__':
-    miit_model=os.environ.get("miit_model")
-    # 部署有前缀的话，需要适配 
-    if os.environ.get("QlBaseUrl") is not None:
-        QLUtils.set_config(host=f'http://127.0.0.1:5700{os.environ.get("QlBaseUrl")}/open')
-    if miit_model is None:
-        QLUtils.disable_self()
-    else:
-        miit_monitor(miit_model)
+    try:
+        miit_model=os.environ.get("miit_model")
+        # 部署有前缀的话，需要适配 
+        if os.environ.get("QlBaseUrl") is not None:
+            QLUtils.set_config(host=f'http://127.0.0.1:5700{os.environ.get("QlBaseUrl")}/open')
+        if miit_model is None:
+            QLUtils.disable_self()
+        else:
+            miit_monitor(miit_model)
     
+    except Exception as e:
+        print("脚本执行出错:", e)
+        traceback.print_exc(file=sys.stdout)

@@ -15,13 +15,14 @@ class QLUtils:
         if not script_name:
             caller_frame = inspect.stack()[1]
             script_name = os.path.basename(caller_frame.filename)
-        
+            print(f"禁用调用脚本为：{script_name}")
         # 调用内部方法链
         token = QLUtils._get_local_token()
         if not token:
             return {"code": -1, "message": "获取令牌失败"}
         
         script_id = QLUtils._get_script_id(token, script_name)
+        print(f"待禁用脚本id：{script_id}")
         if not script_id:
             return {"code": -1, "message": f"未找到脚本 {script_name} 的ID"}
         
@@ -67,9 +68,10 @@ class QLUtils:
                 "Authorization": f"Bearer {token}",
                 "Content-Type": "application/json"
             }
-            response = requests.put(url, headers=headers,json=[id,])
+            response = requests.put(url, headers=headers,json=[script_id,])
             return response.json()
         except Exception as e:
+            print(f"禁用失败: {str(e)}")
             return {"code": -1, "message": f"禁用失败: {str(e)}"}
 
     @staticmethod
