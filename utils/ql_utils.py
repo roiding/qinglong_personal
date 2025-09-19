@@ -6,7 +6,7 @@ import inspect
 class QLUtils:
     # 青龙面板默认配置
     _QL_HOST = "http://127.0.0.1:5700"
-    _CONFIG_PATH = "/ql/config/auth.json"
+    _CONFIG_PATH = "/ql/data/config/auth.json"
 
     @staticmethod
     def disable_self(script_name=None):
