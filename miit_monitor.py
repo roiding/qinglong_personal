@@ -21,7 +21,8 @@ def miit_monitor(model):
 
 if __name__ == '__main__':
     miit_model=os.environ.get("miit_model")
-    if not miit_model:
+    if miit_model is None:
         QLUtils.disable_self()
-    miit_monitor(miit_model)
+    else:
+        miit_monitor(miit_model)
     
