@@ -7,7 +7,7 @@ from typing import TypedDict
 import os
 import json
 import requests
-from .Notify import BarkNotify
+from Notify import BarkNotify
 import sys, traceback
 class Data(TypedDict):
     """
