@@ -1,4 +1,3 @@
-# ql:no-task
 import requests
 import os
 import json

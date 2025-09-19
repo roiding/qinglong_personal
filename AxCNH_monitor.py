@@ -1,13 +1,14 @@
-# cron: */10 * * * *
-# new Env('AxCNH监控脚本')
-
+'''
+name: AxCNH监控脚本
+cron: */10 * * * *
+'''
 
 # 监控AxCNH的监管账号的余额变更
 from typing import TypedDict
 import os
 import json
 import requests
-from Notify import BarkNotify
+from notify_utils import BarkNotify
 import sys, traceback
 class Data(TypedDict):
     """
