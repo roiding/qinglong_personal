@@ -8,7 +8,7 @@ from typing import TypedDict
 import os
 import json
 import requests
-from notify_utils import BarkNotify
+from utils.notify_utils import BarkNotify
 import sys, traceback
 class Data(TypedDict):
     """

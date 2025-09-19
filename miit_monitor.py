@@ -3,10 +3,10 @@ name: 工信部入网证书监测
 cron: 0 8-21 * * *
 '''
 
-import ql_utils
+from utils.ql_utils import QLUtils
 import os
 import requests
-from  notify_utils import BarkNotify
+from  utils.notify_utils import BarkNotify
 def miit_monitor(model): 
     url=f'https://jwxk.miit.gov.cn/dev-api-20/internetService/CertificateQuery?equipmentModel={model}&sort=desc&pageNo=1&pageSize=10&isphoto=1&licenseNo=&equipmentCategory=&applyOrg=&manufacturingEnterpriseCname=&equipmentName=&startDate=&endDate='
     result=requests.get(url).json()
@@ -17,11 +17,11 @@ def miit_monitor(model):
             acceptId = i.get('acceptId')
             print(f'设备{model}已获取入网证书：{licenseNo},批准编号为：{acceptId}')
             BarkNotify().send_notify(f'{model}已获取入网证书',f'设备{model}已获取入网证书：{licenseNo},批准编号为：{acceptId}',group='miit_monitor',url=f'https://jwxk.miit.gov.cn/showPhotos?lic={licenseNo}&acceptId={acceptId}')
-        ql_utils.disable_self()
+        QLUtils.disable_self()
 
 if __name__ == '__main__':
     miit_model=os.environ.get("miit_model")
     if not miit_model:
-        ql_utils.disable_self()
+        QLUtils.disable_self()
     miit_monitor(miit_model)
     
