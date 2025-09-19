@@ -11,7 +11,10 @@ import traceback,sys
 import json
 def miit_monitor(model): 
     url=f'https://jwxk.miit.gov.cn/dev-api-20/internetService/CertificateQuery?equipmentModel={model}&sort=desc&pageNo=1&pageSize=10&isphoto=1&licenseNo=&equipmentCategory=&applyOrg=&manufacturingEnterpriseCname=&equipmentName=&startDate=&endDate='
-    result=requests.get(url).text
+    headers={
+        "user-agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        }
+    result=requests.get(url,headers=headers).text
     result= json.loads(result.strip())
     if result.get('code') == 200:
         print(f'{model}入网证书信息如下：')
