@@ -62,12 +62,12 @@ class QLUtils:
     def _disable_script(token, script_id):
         """内部方法：禁用脚本"""
         try:
-            url = f"{QLUtils._QL_HOST}/api/crons/disable/{script_id}"
+            url = f"{QLUtils._QL_HOST}/crons/disable"
             headers = {
                 "Authorization": f"Bearer {token}",
                 "Content-Type": "application/json"
             }
-            response = requests.put(url, headers=headers)
+            response = requests.put(url, headers=headers,json=[id,])
             return response.json()
         except Exception as e:
             return {"code": -1, "message": f"禁用失败: {str(e)}"}
