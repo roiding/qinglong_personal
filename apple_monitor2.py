@@ -1,6 +1,6 @@
 '''
 name: 国行苹果Air购买界面监测
-cron: */5 * * * *
+cron: */5 8-23 * * *
 '''
 import requests
 from utils.notify_utils import BarkNotify

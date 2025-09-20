@@ -1,6 +1,6 @@
 '''
 name: 苹果ESIM说明页面更新监测
-cron: */10 8-24 * * *
+cron: */10 8-23 * * *
 '''
 import requests
 from utils.notify_utils import BarkNotify
