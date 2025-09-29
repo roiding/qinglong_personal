@@ -1,6 +1,6 @@
 '''
 name: 吉利自动签到脚本
-cron: 0 8 * * * *
+cron: 0 8 * * *
 '''
 import os
 from utils.geely.geely_panda_utils import GeelyUser
