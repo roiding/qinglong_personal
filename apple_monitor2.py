@@ -53,7 +53,9 @@ if __name__ == '__main__':
         headers = {
             "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
         }
-        result = requests.get(
+        session=requests.session()
+        session.get("https://www.apple.com.cn/shop/buy-iphone/iphone-air", headers=headers)
+        result = session.get(
             'https://www.apple.com.cn/shop/buyability-message?parts.0=MG3C4CH/A', headers=headers).json()
         buyabilityMessage = result.get('body').get(
             'content').get('buyabilityMessage')
@@ -62,7 +64,7 @@ if __name__ == '__main__':
                                      'https://www.apple.com.cn/shop/buy-iphone/iphone-air/MG3C4CH/A')
             QLUtils.disable_self()
 
-        response = requests.get(
+        response = session.get(
             "https://www.apple.com.cn/shop/fulfillment-messages?fae=true&little=false&parts.0=MG3C4CH/A&mts.0=regular&mts.1=sticky&fts=true", headers=headers).json()
         result = final_result = extract_final_buyability(response)
         if result.get('stores') or result.get('sticky') or result.get('regular'):
