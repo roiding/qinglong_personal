@@ -55,7 +55,8 @@ if __name__ == '__main__':
         }
         session=requests.session()
         session.get("https://www.apple.com.cn/shop/buy-iphone/iphone-air", headers=headers)
-        result = session.get(
+        session.get("https://www.apple.com.cn/shop/beacon/atb",headers=headers)
+        result = requests.get(
             'https://www.apple.com.cn/shop/buyability-message?parts.0=MG3C4CH/A', headers=headers).json()
         buyabilityMessage = result.get('body').get(
             'content').get('buyabilityMessage')
@@ -64,13 +65,13 @@ if __name__ == '__main__':
                                      'https://www.apple.com.cn/shop/buy-iphone/iphone-air/MG3C4CH/A')
             QLUtils.disable_self()
 
-        response = session.get(
-            "https://www.apple.com.cn/shop/fulfillment-messages?fae=true&little=false&parts.0=MG3C4CH/A&mts.0=regular&mts.1=sticky&fts=true", headers=headers).json()
-        result = final_result = extract_final_buyability(response)
-        if result.get('stores') or result.get('sticky') or result.get('regular'):
-            BarkNotify().send_notify(f'国行Air已开启官网购买', f'国行Air已开启官网购买', 'applestore',
-                                     'https://www.apple.com.cn/shop/buy-iphone/iphone-air/MG3C4CH/A')
-            QLUtils.disable_self()
+        # response = session.get(
+        #     "https://www.apple.com.cn/shop/fulfillment-messages?fae=true&little=false&parts.0=MG3C4CH/A&mts.0=regular&mts.1=sticky&fts=true", headers=headers)
+        # result = final_result = extract_final_buyability(response)
+        # if result.get('stores') or result.get('sticky') or result.get('regular'):
+        #     BarkNotify().send_notify(f'国行Air已开启官网购买', f'国行Air已开启官网购买', 'applestore',
+        #                              'https://www.apple.com.cn/shop/buy-iphone/iphone-air/MG3C4CH/A')
+        #     QLUtils.disable_self()
 
     except Exception as e:
         print("脚本执行出错:", e)
