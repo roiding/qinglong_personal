@@ -336,8 +336,25 @@ async def main():
         print("\n✓ 检查完成")
 
     except Exception as e:
+        error_msg = str(e)
         print(f"\n✗ 脚本执行出错: {e}")
         traceback.print_exc(file=sys.stdout)
+
+        # 检查是否是认证错误（CLIENT_SECRET 可能过期）
+        auth_error_keywords = ['Authentication failed', 'invalid_client', 'AADSTS', 'expired', 'unauthorized']
+        if any(keyword.lower() in error_msg.lower() for keyword in auth_error_keywords):
+            try:
+                from utils.notify_utils import BarkNotify
+                alert_msg = f"⚠️ E5 用户有效期检查认证失败\n\n可能原因：CLIENT_SECRET 已过期\n\n错误信息：{error_msg[:200]}\n\n请前往 Azure Portal 更新 CLIENT_SECRET"
+                BarkNotify().send_notify(
+                    "E5 认证失败警告",
+                    alert_msg,
+                    level=BarkNotify.Level.CRITICAL,
+                    group='microsoft'
+                )
+                print("\n已发送认证失败警告推送")
+            except:
+                pass
 
 
 if __name__ == "__main__":
