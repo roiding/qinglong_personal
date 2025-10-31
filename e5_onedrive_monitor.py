@@ -126,24 +126,24 @@ class OneDriveMonitor:
             return None
 
     def get_all_users_usage(self) -> List[UserOneDriveInfo]:
-        """获取所有 Salted-Fish 开头的用户的 OneDrive 使用情况"""
+        """获取所有 Salted Fish 开头的用户的 OneDrive 使用情况"""
         results = []
 
         print("正在获取所有用户列表...")
         all_users = self.get_all_users()
         print(f"找到 {len(all_users)} 个启用的用户")
 
-        # 筛选以 Salted-Fish 开头的用户
+        # 筛选以 Salted Fish 开头的用户
         target_users = []
         for user in all_users:
             display_name = user.get('displayName', '')
             user_email = user.get('userPrincipalName', '')
 
-            # 检查显示名称或邮箱是否以 Salted-Fish 开头
-            if display_name.startswith('Salted-Fish') or user_email.startswith('Salted-Fish'):
+            # 检查显示名称或邮箱是否以 Salted Fish 开头
+            if display_name.startswith('Salted Fish') or user_email.startswith('Salted Fish'):
                 target_users.append(user)
 
-        print(f"筛选出 {len(target_users)} 个 Salted-Fish 开头的用户")
+        print(f"筛选出 {len(target_users)} 个 Salted Fish 开头的用户")
 
         for user in target_users:
             email = user.get('userPrincipalName', 'Unknown')
