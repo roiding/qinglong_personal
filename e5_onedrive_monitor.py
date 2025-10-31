@@ -291,7 +291,7 @@ async def main():
         try:
             from utils.notify_utils import BarkNotify
             print("\n正在发送推送通知...")
-            result = BarkNotify().send_notify("E5 OneDrive 监控报告", report, 'microsoft')
+            result = BarkNotify().send_notify("E5 OneDrive 监控报告", report, level=BarkNotify.Level.ACTIVE, group='microsoft')
             if result:
                 print(f"✓ 推送通知已发送，响应: {result}")
             else:

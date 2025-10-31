@@ -86,11 +86,11 @@ if __name__ == "__main__":
             if result.get('AxCNH_supply') != AxCNH_supply:
                 old_formatted = Num_Format.format_number(result.get('AxCNH_supply'))
                 new_formatted = Num_Format.format_number(AxCNH_supply)
-                BarkNotify.send_notify('代币总供应量出现变动', f'从 {old_formatted} 变更为 {new_formatted}',group='AxCNH',url=f'https://evm.confluxscan.org/token/{AxCNH_contract_address}')
+                BarkNotify.send_notify('代币总供应量出现变动', f'从 {old_formatted} 变更为 {new_formatted}',level=BarkNotify.Level.CRITICAL,group='AxCNH',url=f'https://evm.confluxscan.org/token/{AxCNH_contract_address}')
             if result.get('AxCNH_bank_balance') != AxCNH_bank_balance:
                 old_formatted = Num_Format.format_number(result.get('AxCNH_bank_balance'))
                 new_formatted = Num_Format.format_number(AxCNH_bank_balance)
-                BarkNotify.send_notify('授权银行余额出现变动',f'从 {old_formatted} 变更为 {new_formatted}',group='AxCNH',url=f'https://evm.confluxscan.org/address/{bank_address}')
+                BarkNotify.send_notify('授权银行余额出现变动',f'从 {old_formatted} 变更为 {new_formatted}',level=BarkNotify.Level.CRITICAL,group='AxCNH',url=f'https://evm.confluxscan.org/address/{bank_address}')
 
         
         file_result = {

@@ -39,7 +39,7 @@ if __name__ == '__main__':
                 if (datetime.strptime(last_modified, "%a, %d %b %Y %H:%M:%S GMT") - datetime.now()).total_seconds() > 60 * 60:
                     print(f"{item['name']}已更新")
                     BarkNotify().send_notify(
-                        f"{item['name']}已更新", f"{item['name']}已更新", 'applestore', item['url'])
+                        f"{item['name']}已更新", f"{item['name']}已更新", level=BarkNotify.Level.CRITICAL, group='applestore', url=item['url'])
                     QLUtils.disable_self()
     except Exception as e:
         print("脚本执行出错:", e)
