@@ -31,6 +31,8 @@ class E5Config:
         self.client_id = os.getenv('E5_CLIENT_ID', '')
         self.username = os.getenv('E5_USERNAME', '')
         self.password = os.getenv('E5_PASSWORD', '')
+        # 用户前缀筛选，默认为 "Salted Fish"
+        self.user_prefix = os.getenv('E5_USER_PREFIX', 'Salted Fish')
 
     def validate(self) -> bool:
         """验证必要配置是否存在"""
@@ -126,24 +128,25 @@ class OneDriveMonitor:
             return None
 
     def get_all_users_usage(self) -> List[UserOneDriveInfo]:
-        """获取所有 Salted Fish 开头的用户的 OneDrive 使用情况"""
+        """获取所有指定前缀开头的用户的 OneDrive 使用情况"""
         results = []
+        user_prefix = self.config.user_prefix
 
         print("正在获取所有用户列表...")
         all_users = self.get_all_users()
         print(f"找到 {len(all_users)} 个启用的用户")
 
-        # 筛选以 Salted Fish 开头的用户
+        # 筛选以指定前缀开头的用户
         target_users = []
         for user in all_users:
             display_name = user.get('displayName', '')
             user_email = user.get('userPrincipalName', '')
 
-            # 检查显示名称或邮箱是否以 Salted Fish 开头
-            if display_name.startswith('Salted Fish') or user_email.startswith('Salted Fish'):
+            # 检查显示名称或邮箱是否以指定前缀开头
+            if display_name.startswith(user_prefix) or user_email.startswith(user_prefix):
                 target_users.append(user)
 
-        print(f"筛选出 {len(target_users)} 个 Salted Fish 开头的用户")
+        print(f"筛选出 {len(target_users)} 个以 '{user_prefix}' 开头的用户")
 
         for user in target_users:
             email = user.get('userPrincipalName', 'Unknown')
@@ -231,7 +234,7 @@ def main():
 
         print(f"租户ID: {config.tenant_id}")
         print(f"登录用户: {config.username}")
-        print(f"筛选规则: 只查询以 'Salted-Fish' 开头的账号")
+        print(f"筛选规则: 只查询以 '{config.user_prefix}' 开头的账号")
         print()
 
         monitor = OneDriveMonitor(config)
