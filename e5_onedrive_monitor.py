@@ -1,6 +1,6 @@
 '''
 name: E5 OneDrive使用情况监控
-cron: 0 9 * * *
+cron: 0 9 * * 1
 '''
 
 import os
