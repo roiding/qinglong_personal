@@ -21,7 +21,7 @@ class BarkNotify:
         PASSIVE = 'passive'
 
     @staticmethod
-    def send_notify(title, body, group=None,level=Level.ACTIVE, url=None):
+    def send_notify(title, body, group=None, level=Level.ACTIVE, url=None):
         '''
             发送推送（按照官方 POST JSON 格式）
         '''
@@ -31,9 +31,9 @@ class BarkNotify:
 
         # 按照官方示例构建 JSON body
         payload = {
-            'title': quote(title),
-            'body': quote(body),
-            'level': level.value,
+            'title': title,
+            'body': body,
+            'level': level.value if isinstance(level, BarkNotify.Level) else level,
             'isArchive': 1
         }
 
