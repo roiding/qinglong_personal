@@ -6,24 +6,25 @@ class BarkNotify:
     @staticmethod
     def send_notify(title, body, group=None, url=None):
         '''
-            发送推送
+            发送推送（按照官方 POST JSON 格式）
         '''
         notify_api = os.environ.get('NOTIFY_API')
         if not notify_api:
             return
 
-        # 构建 URL 路径（GET 方式）
-        api_url = f"{notify_api}/{quote(title)}/{quote(body)}"
-
-        # 添加查询参数
-        params = {
+        # 按照官方示例构建 JSON body
+        payload = {
+            'title': quote(title),
+            'body': quote(body),
             'level': 'critical',
-            'isArchive': '1'
+            'isArchive': 1
         }
-        if group:
-            params['group'] = group
-        if url:
-            params['url'] = url
 
-        result = requests.get(api_url, params=params).json()
+        # 可选参数
+        if group:
+            payload['group'] = group
+        if url:
+            payload['url'] = url
+
+        result = requests.post(notify_api, json=payload).json()
         return result
