@@ -1,0 +1,25 @@
+[project]
+name = "qinglong-personal"
+version = "0.1.0"
+description = "青龙面板个人脚本集合"
+requires-python = ">=3.9"
+dependencies = [
+    "requests>=2.32.0",
+    "azure-identity>=1.25.0",
+    "msgraph-core>=1.3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "types-requests>=2.32.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["utils"]
+
+[dependency-groups]
+dev = []
