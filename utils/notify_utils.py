@@ -31,8 +31,8 @@ class BarkNotify:
 
         # 按照官方示例构建 JSON body
         payload = {
-            'title': title,
-            'body': body,
+            'title': quote(title),
+            'body': quote(body),
             'level': level.value if isinstance(level, BarkNotify.Level) else level,
             'isArchive': 1
         }
