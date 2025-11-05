@@ -1,6 +1,6 @@
 '''
 name: E5 工作区活动
-cron: 0 */4 * * *
+cron: 0 */2 * * *
 '''
 
 import os
@@ -160,17 +160,9 @@ class WorkspaceActivityManager:
     async def create_onenote_page(self, title: str) -> dict:
         """创建 OneNote 页面"""
         try:
-            # 首先获取笔记本列表
-            try:
-                notebooks = await self.graph_client.me.onenote.notebooks.get()
-            except Exception as e:
-                return {
-                    'success': False,
-                    'title': title,
-                    'error': f'Failed to get notebooks: {str(e)[:50]}'
-                }
+            # 获取笔记本列表
+            notebooks = await self.graph_client.me.onenote.notebooks.get()
 
-            # 只在已有笔记本时才创建页面
             if not notebooks or not hasattr(notebooks, 'value') or not notebooks.value or len(notebooks.value) == 0:
                 return {
                     'success': False,
@@ -179,24 +171,10 @@ class WorkspaceActivityManager:
                 }
 
             notebook = notebooks.value[0]
-            if not hasattr(notebook, 'id') or not notebook.id:
-                return {
-                    'success': False,
-                    'title': title,
-                    'error': 'Invalid notebook object'
-                }
 
-            # 获取该笔记本的分区
-            try:
-                sections = await self.graph_client.me.onenote.notebooks.by_notebook_id(notebook.id).sections.get()
-            except Exception as e:
-                return {
-                    'success': False,
-                    'title': title,
-                    'error': f'Failed to get sections: {str(e)[:50]}'
-                }
+            # 获取分区列表
+            sections = await self.graph_client.me.onenote.notebooks.by_notebook_id(notebook.id).sections.get()
 
-            # 只在已有分区时才创建页面
             if not sections or not hasattr(sections, 'value') or not sections.value or len(sections.value) == 0:
                 return {
                     'success': False,
@@ -205,53 +183,60 @@ class WorkspaceActivityManager:
                 }
 
             section = sections.value[0]
-            if not hasattr(section, 'id') or not section.id:
-                return {
-                    'success': False,
-                    'title': title,
-                    'error': 'Invalid section object'
-                }
 
-            # 创建 HTML 内容
-            html_content = f'''
-<!DOCTYPE html>
+            # 创建 HTML 内容（简化格式）
+            html_content = f'''<!DOCTYPE html>
 <html>
-  <head>
-    <title>{title}</title>
-  </head>
-  <body>
-    <p>Created at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-    <p>Random content: {random.randint(100000, 999999)}</p>
-  </body>
-</html>
-'''
+<head><title>{title}</title></head>
+<body>
+<p>Created at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+<p>Random content: {random.randint(100000, 999999)}</p>
+</body>
+</html>'''
 
-            # 使用 REST API 创建页面
-            from kiota_abstractions.request_information import RequestInformation
-            from io import BytesIO
+            # 使用 httpx 直接发送请求
+            import httpx
 
-            request_info = RequestInformation()
-            request_info.http_method = "POST"
-            request_info.url_template = f"{{+baseurl}}/me/onenote/sections/{section.id}/pages"
-            request_info.headers.try_add("Content-Type", "text/html")
+            # 获取访问令牌
+            from azure.identity import UsernamePasswordCredential
+            credential = UsernamePasswordCredential(
+                client_id=self.config.client_id,
+                username=self.config.username,
+                password=self.config.password,
+                tenant_id=self.config.tenant_id
+            )
+            token = credential.get_token("https://graph.microsoft.com/.default")
 
-            # 直接设置内容
-            request_info.content = BytesIO(html_content.encode('utf-8'))
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"https://graph.microsoft.com/v1.0/me/onenote/sections/{section.id}/pages",
+                    headers={
+                        "Authorization": f"Bearer {token.token}",
+                        "Content-Type": "text/html"
+                    },
+                    content=html_content.encode('utf-8'),
+                    timeout=30.0
+                )
 
-            await self.graph_client.request_adapter.send_primitive_async(request_info, dict, {})
-
-            return {
-                'success': True,
-                'title': title,
-                'result': 'created'
-            }
+                if response.status_code in [200, 201]:
+                    return {
+                        'success': True,
+                        'title': title,
+                        'result': 'created'
+                    }
+                else:
+                    return {
+                        'success': False,
+                        'title': title,
+                        'error': f'HTTP {response.status_code}: {response.text[:50]}'
+                    }
 
         except Exception as e:
             error_msg = str(e)
             return {
                 'success': False,
                 'title': title,
-                'error': error_msg
+                'error': error_msg[:100]
             }
 
     async def upload_sharepoint_file(self, file_name: str) -> dict:
@@ -628,24 +613,39 @@ class WorkspaceActivityManager:
     async def access_sharepoint_sites(self) -> dict:
         """访问 SharePoint 站点"""
         try:
-            # 尝试多种方式访问 SharePoint
             site_count = 0
 
             # 方式1：尝试获取根站点
             try:
                 root_site = await self.graph_client.sites.root.get()
-                if root_site:
+                if root_site and hasattr(root_site, 'id') and root_site.id:
                     site_count += 1
             except:
                 pass
 
-            # 方式2：尝试获取关注的站点
+            # 方式2：尝试列出所有站点（使用 search）
             try:
-                sites = await self.graph_client.me.followed_sites.get()
-                if sites and sites.value:
-                    site_count += len(sites.value)
+                # 搜索所有站点
+                from kiota_abstractions.request_information import RequestInformation
+                request_info = RequestInformation()
+                request_info.http_method = "GET"
+                request_info.url_template = "{+baseurl}/sites?search=*"
+
+                sites_result = await self.graph_client.request_adapter.send_primitive_async(request_info, dict, {})
+
+                if sites_result and 'value' in sites_result:
+                    site_count = len(sites_result['value'])
             except:
                 pass
+
+            # 方式3：尝试获取关注的站点
+            if site_count == 0:
+                try:
+                    sites = await self.graph_client.me.followed_sites.get()
+                    if sites and sites.value:
+                        site_count = len(sites.value)
+                except:
+                    pass
 
             return {
                 'success': True,
