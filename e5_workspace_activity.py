@@ -43,26 +43,60 @@ class WorkspaceActivityManager:
 
     def __init__(self, config: E5Config):
         self.config = config
-        credential = UsernamePasswordCredential(
+        self.credential = UsernamePasswordCredential(
             client_id=config.client_id,
             username=config.username,
             password=config.password,
             tenant_id=config.tenant_id
         )
-        self.graph_client = GraphServiceClient(credentials=credential)
+        self.graph_client = GraphServiceClient(credentials=self.credential)
+
+    # 统一的主题列表（用于邮件、日历、任务、OneNote）
+    UNIFIED_TOPICS = [
+        'Project Management Review',
+        'Cloud Computing Strategy',
+        'Data Analysis Report',
+        'Security Best Practices',
+        'Team Collaboration Plan',
+        'Workflow Automation',
+        'API Integration Guidelines',
+        'Technical Documentation',
+        'Meeting Notes Summary',
+        'Quarterly Business Report',
+        'Product Development Roadmap',
+        'Customer Feedback Analysis',
+        'Marketing Campaign Ideas',
+        'Budget Planning Discussion',
+        'Performance Metrics Review',
+        'Infrastructure Upgrade Plan',
+        'Code Review Standards',
+        'Database Optimization',
+        'System Architecture Design',
+        'User Experience Research',
+        'Quality Assurance Process',
+        'Deployment Strategy',
+        'Risk Management Assessment',
+        'Training Materials',
+        'Innovation Proposals',
+    ]
 
     # 搜索关键词列表
     SEARCH_KEYWORDS = [
-        'project management',
-        'cloud computing',
-        'data analysis',
-        'security best practices',
-        'team collaboration',
-        'workflow automation',
-        'API integration',
-        'documentation',
-        'meeting notes',
-        'quarterly report',
+        'Project',
+        'Cloud',
+        'Data',
+        'Security',
+        'Team',
+        'Workflow',
+        'API',
+        'Documentation',
+        'Meeting',
+        'Report',
+        'Development',
+        'Feedback',
+        'Marketing',
+        'Budget',
+        'Performance',
     ]
 
     async def send_email_to_self(self, subject: str) -> dict:
@@ -157,86 +191,223 @@ class WorkspaceActivityManager:
                 'error': error_msg
             }
 
+    async def create_onenote_notebook(self, name: str) -> dict:
+        """创建 OneNote 笔记本"""
+        try:
+            from msgraph.generated.models.notebook import Notebook
+
+            notebook = Notebook()
+            notebook.display_name = name
+
+            result = await self.graph_client.me.onenote.notebooks.post(notebook)
+
+            return {
+                'success': True,
+                'name': name,
+                'id': result.id if result else None
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'name': name,
+                'error': str(e)[:100]
+            }
+
+    async def create_onenote_section(self, notebook_id: str, name: str) -> dict:
+        """创建 OneNote 分区"""
+        try:
+            from msgraph.generated.models.onenote_section import OnenoteSection
+
+            section = OnenoteSection()
+            section.display_name = name
+
+            result = await self.graph_client.me.onenote.notebooks.by_notebook_id(notebook_id).sections.post(section)
+
+            return {
+                'success': True,
+                'name': name,
+                'id': result.id if result else None
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'name': name,
+                'error': str(e)[:100]
+            }
+
     async def create_onenote_page(self, title: str) -> dict:
-        """创建 OneNote 页面"""
+        """创建 OneNote 页面（自动创建笔记本和分区，或使用现有的）"""
         try:
             # 获取笔记本列表
             notebooks = await self.graph_client.me.onenote.notebooks.get()
 
-            if not notebooks or not hasattr(notebooks, 'value') or not notebooks.value or len(notebooks.value) == 0:
+            # 查找名为 "Work Notes" 的笔记本（脚本专用）
+            target_notebook = None
+            if notebooks and notebooks.value:
+                for nb in notebooks.value:
+                    if hasattr(nb, 'display_name') and nb.display_name == 'Work Notes':
+                        target_notebook = nb
+                        break
+
+            # 如果没有找到，创建新笔记本
+            if not target_notebook:
+                nb_result = await self.create_onenote_notebook('Work Notes')
+                if not nb_result['success']:
+                    return {
+                        'success': False,
+                        'title': title,
+                        'error': f"创建笔记本失败: {nb_result.get('error', '')}"
+                    }
+                # 等待创建完成并重新获取
+                await asyncio.sleep(2)
+                notebooks = await self.graph_client.me.onenote.notebooks.get()
+                if notebooks and notebooks.value:
+                    for nb in notebooks.value:
+                        if hasattr(nb, 'display_name') and nb.display_name == 'Work Notes':
+                            target_notebook = nb
+                            break
+
+            if not target_notebook:
                 return {
                     'success': False,
                     'title': title,
-                    'error': 'No notebook found'
+                    'error': 'Failed to create or find notebook'
                 }
 
-            notebook = notebooks.value[0]
+            notebook = target_notebook
 
             # 获取分区列表
             sections = await self.graph_client.me.onenote.notebooks.by_notebook_id(notebook.id).sections.get()
 
-            if not sections or not hasattr(sections, 'value') or not sections.value or len(sections.value) == 0:
+            # 查找名为 "Activity Log" 的分区（脚本专用）
+            target_section = None
+            if sections and sections.value:
+                for sec in sections.value:
+                    if hasattr(sec, 'display_name') and sec.display_name == 'Activity Log':
+                        target_section = sec
+                        break
+
+            # 如果没有找到，创建新分区
+            if not target_section:
+                sec_result = await self.create_onenote_section(notebook.id, 'Activity Log')
+                if not sec_result['success']:
+                    return {
+                        'success': False,
+                        'title': title,
+                        'error': f"创建分区失败: {sec_result.get('error', '')}"
+                    }
+                # 等待创建完成并重新获取
+                await asyncio.sleep(2)
+                sections = await self.graph_client.me.onenote.notebooks.by_notebook_id(notebook.id).sections.get()
+                if sections and sections.value:
+                    for sec in sections.value:
+                        if hasattr(sec, 'display_name') and sec.display_name == 'Activity Log':
+                            target_section = sec
+                            break
+
+            if not target_section:
                 return {
                     'success': False,
                     'title': title,
-                    'error': 'No section found'
+                    'error': 'Failed to create or find section'
                 }
 
-            section = sections.value[0]
+            section = target_section
 
-            # 创建 HTML 内容（简化格式）
-            html_content = f'''<!DOCTYPE html>
-<html>
-<head><title>{title}</title></head>
+            # 转义 HTML 特殊字符
+            import html
+            safe_title = html.escape(title)
+
+            # OneNote API 需要 well-formed XHTML
+            html_content = f'''<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>{safe_title}</title>
+</head>
 <body>
+<h1>{safe_title}</h1>
 <p>Created at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
 <p>Random content: {random.randint(100000, 999999)}</p>
 </body>
 </html>'''
 
-            # 使用 httpx 直接发送请求
-            import httpx
+            # msgraph SDK 不支持 OneNote 页面创建，使用底层 HTTP 客户端
+            http_client = self.graph_client.request_adapter._http_client
+            token = self.credential.get_token("https://graph.microsoft.com/.default")
 
-            # 获取访问令牌
-            from azure.identity import UsernamePasswordCredential
-            credential = UsernamePasswordCredential(
-                client_id=self.config.client_id,
-                username=self.config.username,
-                password=self.config.password,
-                tenant_id=self.config.tenant_id
-            )
-            token = credential.get_token("https://graph.microsoft.com/.default")
-
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
+            try:
+                response = await http_client.post(
                     f"https://graph.microsoft.com/v1.0/me/onenote/sections/{section.id}/pages",
                     headers={
                         "Authorization": f"Bearer {token.token}",
-                        "Content-Type": "text/html"
+                        "Content-Type": "application/xhtml+xml"
                     },
-                    content=html_content.encode('utf-8'),
-                    timeout=30.0
+                    content=html_content.encode('utf-8')
                 )
 
                 if response.status_code in [200, 201]:
-                    return {
-                        'success': True,
-                        'title': title,
-                        'result': 'created'
-                    }
+                    # 解析响应获取页面 ID
+                    try:
+                        import json
+                        result_data = json.loads(response.content.decode('utf-8'))
+                        page_id = result_data.get('id', 'unknown')
+                        page_url = result_data.get('links', {}).get('oneNoteWebUrl', {}).get('href', '')
+                        return {
+                            'success': True,
+                            'title': title,
+                            'result': 'created',
+                            'page_id': page_id,
+                            'notebook': notebook.display_name if hasattr(notebook, 'display_name') else notebook.id,
+                            'section': section.display_name if hasattr(section, 'display_name') else section.id,
+                            'url': page_url  # 显示完整 URL
+                        }
+                    except:
+                        return {
+                            'success': True,
+                            'title': title,
+                            'result': 'created'
+                        }
                 else:
+                    # 获取完整的错误响应
+                    error_text = response.text if hasattr(response, 'text') else str(response.content)
                     return {
                         'success': False,
                         'title': title,
-                        'error': f'HTTP {response.status_code}: {response.text[:50]}'
+                        'error': f'HTTP {response.status_code}: {error_text[:200]}'
                     }
+            except Exception as http_error:
+                # httpx 可能在非 2xx 响应时抛出异常
+                error_detail = str(http_error)
+                if hasattr(http_error, 'response'):
+                    try:
+                        resp = http_error.response
+                        if hasattr(resp, 'text'):
+                            error_detail = f"HTTP {resp.status_code}: {resp.text[:200]}"
+                        elif hasattr(resp, 'content'):
+                            error_detail = f"HTTP {resp.status_code}: {resp.content.decode('utf-8', errors='ignore')[:200]}"
+                    except:
+                        pass
+                return {
+                    'success': False,
+                    'title': title,
+                    'error': error_detail
+                }
 
         except Exception as e:
             error_msg = str(e)
+            # 如果是 API 错误，尝试获取更多细节
+            if hasattr(e, 'response'):
+                try:
+                    error_msg += f" | Response: {e.response.text if hasattr(e.response, 'text') else str(e.response)}"
+                except:
+                    pass
             return {
                 'success': False,
                 'title': title,
-                'error': error_msg[:100]
+                'error': error_msg[:300]
             }
 
     async def upload_sharepoint_file(self, file_name: str) -> dict:
@@ -461,9 +632,19 @@ class WorkspaceActivityManager:
 
         except Exception as e:
             error_msg = str(e)
+            # 如果是 API 错误，尝试获取更多细节
+            if hasattr(e, 'response'):
+                try:
+                    resp = e.response
+                    if hasattr(resp, 'text'):
+                        error_msg = f"{error_msg} | Response: {resp.text[:200]}"
+                    elif hasattr(resp, 'content'):
+                        error_msg = f"{error_msg} | Response: {resp.content.decode('utf-8', errors='ignore')[:200]}"
+                except:
+                    pass
             return {
                 'success': False,
-                'error': error_msg
+                'error': error_msg[:300]
             }
 
     async def delete_old_emails(self, count: int = 5) -> dict:
@@ -546,25 +727,39 @@ class WorkspaceActivityManager:
                 'error': error_msg
             }
 
-    async def delete_onenote_pages(self, count: int = 2) -> dict:
-        """删除 OneNote 页面"""
+    async def delete_onenote_pages(self, count: int = 3) -> dict:
+        """删除 OneNote 页面（仅删除 Work Notes 笔记本中的页面）"""
         try:
             # 获取笔记本
             notebooks = await self.graph_client.me.onenote.notebooks.get()
 
             deleted = 0
-            if notebooks and notebooks.value and len(notebooks.value) > 0:
-                notebook = notebooks.value[0]
-                sections = await self.graph_client.me.onenote.notebooks.by_notebook_id(notebook.id).sections.get()
+            if notebooks and notebooks.value:
+                # 查找 "Work Notes" 笔记本
+                target_notebook = None
+                for nb in notebooks.value:
+                    if hasattr(nb, 'display_name') and nb.display_name == 'Work Notes':
+                        target_notebook = nb
+                        break
 
-                if sections and sections.value and len(sections.value) > 0:
-                    section = sections.value[0]
-                    pages = await self.graph_client.me.onenote.sections.by_onenote_section_id(section.id).pages.get()
+                if target_notebook:
+                    sections = await self.graph_client.me.onenote.notebooks.by_notebook_id(target_notebook.id).sections.get()
 
-                    if pages and pages.value:
-                        for page in pages.value[:count]:
-                            await self.graph_client.me.onenote.pages.by_onenote_page_id(page.id).delete()
-                            deleted += 1
+                    if sections and sections.value:
+                        # 查找 "Activity Log" 分区
+                        target_section = None
+                        for sec in sections.value:
+                            if hasattr(sec, 'display_name') and sec.display_name == 'Activity Log':
+                                target_section = sec
+                                break
+
+                        if target_section:
+                            pages = await self.graph_client.me.onenote.sections.by_onenote_section_id(target_section.id).pages.get()
+
+                            if pages and pages.value:
+                                for page in pages.value[:count]:
+                                    await self.graph_client.me.onenote.pages.by_onenote_page_id(page.id).delete()
+                                    deleted += 1
 
             return {
                 'success': True,
@@ -615,28 +810,22 @@ class WorkspaceActivityManager:
         try:
             site_count = 0
 
-            # 方式1：尝试获取根站点
+            # 方式1：访问用户的 OneDrive 站点（个人 SharePoint 站点）
             try:
-                root_site = await self.graph_client.sites.root.get()
-                if root_site and hasattr(root_site, 'id') and root_site.id:
+                drive = await self.graph_client.me.drive.get()
+                if drive and hasattr(drive, 'id') and drive.id:
                     site_count += 1
             except:
                 pass
 
-            # 方式2：尝试列出所有站点（使用 search）
-            try:
-                # 搜索所有站点
-                from kiota_abstractions.request_information import RequestInformation
-                request_info = RequestInformation()
-                request_info.http_method = "GET"
-                request_info.url_template = "{+baseurl}/sites?search=*"
-
-                sites_result = await self.graph_client.request_adapter.send_primitive_async(request_info, dict, {})
-
-                if sites_result and 'value' in sites_result:
-                    site_count = len(sites_result['value'])
-            except:
-                pass
+            # 方式2：尝试获取根站点
+            if site_count == 0:
+                try:
+                    root_site = await self.graph_client.sites.root.get()
+                    if root_site and hasattr(root_site, 'id') and root_site.id:
+                        site_count += 1
+                except:
+                    pass
 
             # 方式3：尝试获取关注的站点
             if site_count == 0:
@@ -682,64 +871,57 @@ class WorkspaceActivityManager:
             'failed': 0
         }
 
-        # 1. 发送邮件给自己（50% 概率）
-        if random.choice([True, False]):
-            print(f"\n[1/10] 发送邮件给自己")
-            email_subjects = [
-                'Project update',
-                'Meeting follow-up',
-                'Weekly summary',
-                'Task reminder',
-                'Documentation review'
-            ]
-            subject = random.choice(email_subjects)
-            result = await self.send_email_to_self(subject)
-            if result['success']:
-                results['emails_created'] += 1
-                print(f"  ✓ 邮件发送成功: {subject}")
-            else:
-                results['failed'] += 1
-                print(f"  ✗ 邮件发送失败: {result.get('error', '')[:50]}")
-            await asyncio.sleep(random.uniform(1, 3))
+        # 1. 发送邮件给自己（70% 概率，2-3 封）
+        if random.randint(1, 10) <= 7:
+            email_count = random.randint(2, 3)
+            print(f"\n[1/10] 发送邮件给自己（{email_count} 封）")
+            for i in range(email_count):
+                subject = random.choice(self.UNIFIED_TOPICS)
+                result = await self.send_email_to_self(subject)
+                if result['success']:
+                    results['emails_created'] += 1
+                    print(f"  ✓ 邮件 {i+1}/{email_count} 发送成功: {subject}")
+                else:
+                    results['failed'] += 1
+                    print(f"  ✗ 邮件 {i+1}/{email_count} 发送失败: {result.get('error', '')[:50]}")
+                await asyncio.sleep(random.uniform(1, 2))
         else:
             print(f"\n[1/10] 跳过邮件发送")
 
-        # 2. 搜索邮件（2-3 个关键词）
-        search_count = random.randint(2, 3)
-        print(f"\n[2/10] 搜索内容（{search_count} 个关键词）")
-        keywords = random.sample(self.SEARCH_KEYWORDS, search_count)
-        for keyword in keywords:
-            print(f"  搜索: {keyword}")
-            result = await self.search_content(keyword)
-            if result['success']:
-                results['search'] += 1
-                print(f"    ✓ 找到 {result.get('count', 0)} 封邮件")
-            else:
-                results['failed'] += 1
-                print(f"    ✗ 搜索失败: {result.get('error', '')[:50]}")
-            await asyncio.sleep(random.uniform(1, 3))
-
-        # 3. 创建日历事件（50% 概率）
-        if random.choice([True, False]):
-            print(f"\n[3/10] 创建日历事件")
-            event_titles = [
-                'Team meeting',
-                'Project review',
-                'Training session',
-                'Planning meeting',
-                'Status update'
-            ]
-            title = random.choice(event_titles)
-            result = await self.create_calendar_event(title)
-            if result['success']:
-                results['events_created'] += 1
-                print(f"  ✓ 事件创建成功: {title}")
-            else:
-                results['failed'] += 1
-                print(f"  ✗ 事件创建失败: {result.get('error', '')[:50]}")
-            await asyncio.sleep(random.uniform(1, 3))
+        # 2. 搜索邮件（80% 概率，3-5 个关键词）
+        if random.randint(1, 10) <= 8:
+            search_count = random.randint(3, 5)
+            print(f"\n[2/10] 搜索内容（{search_count} 个关键词）")
+            keywords = random.sample(self.SEARCH_KEYWORDS, search_count)
+            for keyword in keywords:
+                print(f"  搜索: {keyword}")
+                result = await self.search_content(keyword)
+                if result['success']:
+                    results['search'] += 1
+                    print(f"    ✓ 找到 {result.get('count', 0)} 封邮件")
+                else:
+                    results['failed'] += 1
+                    print(f"    ✗ 搜索失败: {result.get('error', '')[:50]}")
+                await asyncio.sleep(random.uniform(1, 2))
         else:
-            print(f"\n[3/10] 跳过事件创建")
+            print(f"\n[2/10] 跳过搜索")
+
+        # 3. 创建日历事件（60% 概率，1-2 个）
+        if random.randint(1, 10) <= 6:
+            event_count = random.randint(1, 2)
+            print(f"\n[3/10] 创建日历事件（{event_count} 个）")
+            for i in range(event_count):
+                title = random.choice(self.UNIFIED_TOPICS)
+                result = await self.create_calendar_event(title)
+                if result['success']:
+                    results['events_created'] += 1
+                    print(f"  ✓ 事件 {i+1}/{event_count} 创建成功: {title}")
+                else:
+                    results['failed'] += 1
+                    print(f"  ✗ 事件 {i+1}/{event_count} 创建失败: {result.get('error', '')[:50]}")
+                await asyncio.sleep(random.uniform(1, 2))
+        else:
+            print(f"\n[3/10] 跳过日历事件创建")
 
         # 4. 访问日历事件
         print(f"\n[4/10] 访问日历事件")
@@ -761,47 +943,41 @@ class WorkspaceActivityManager:
             results['failed'] += 1
             print(f"  ✗ 访问失败: {result.get('error', '')[:50]}")
 
-        # 6. 创建 To Do 任务（50% 概率）
-        if random.choice([True, False]):
-            print(f"\n[6/10] 创建 To Do 任务")
-            task_titles = [
-                'Review documentation',
-                'Check system status',
-                'Update project notes',
-                'Prepare weekly report',
-                'Schedule team meeting'
-            ]
-            task_title = random.choice(task_titles)
-            result = await self.create_todo_task(task_title)
-            if result['success']:
-                results['tasks_created'] += 1
-                print(f"  ✓ 任务创建成功: {task_title}")
-            else:
-                results['failed'] += 1
-                print(f"  ✗ 任务创建失败: {result.get('error', '')[:50]}")
-            await asyncio.sleep(random.uniform(1, 3))
+        # 6. 创建 To Do 任务（60% 概率，1-2 个）
+        if random.randint(1, 10) <= 6:
+            task_count = random.randint(1, 2)
+            print(f"\n[6/10] 创建 To Do 任务（{task_count} 个）")
+            for i in range(task_count):
+                task_title = random.choice(self.UNIFIED_TOPICS)
+                result = await self.create_todo_task(task_title)
+                if result['success']:
+                    results['tasks_created'] += 1
+                    print(f"  ✓ 任务 {i+1}/{task_count} 创建成功: {task_title}")
+                else:
+                    results['failed'] += 1
+                    print(f"  ✗ 任务 {i+1}/{task_count} 创建失败: {result.get('error', '')[:50]}")
+                await asyncio.sleep(random.uniform(1, 2))
         else:
-            print(f"\n[6/10] 跳过任务创建")
+            print(f"\n[6/10] 跳过 To Do 任务创建")
 
-        # 7. 创建 OneNote 页面（50% 概率）
-        if random.choice([True, False]):
-            print(f"\n[7/10] 创建 OneNote 页面")
-            page_titles = [
-                'Meeting notes',
-                'Project ideas',
-                'Research notes',
-                'Task list',
-                'Weekly summary'
-            ]
-            page_title = random.choice(page_titles)
-            result = await self.create_onenote_page(page_title)
-            if result['success']:
-                results['onenote_pages'] += 1
-                print(f"  ✓ 页面创建成功: {page_title}")
-            else:
-                results['failed'] += 1
-                print(f"  ✗ 页面创建失败: {result.get('error', '')[:50]}")
-            await asyncio.sleep(random.uniform(1, 3))
+        # 7. 创建 OneNote 页面（60% 概率，1-2 个）
+        if random.randint(1, 10) <= 6:
+            page_count = random.randint(1, 2)
+            print(f"\n[7/10] 创建 OneNote 页面（{page_count} 个）")
+            for i in range(page_count):
+                page_title = random.choice(self.UNIFIED_TOPICS)
+                result = await self.create_onenote_page(page_title)
+                if result['success']:
+                    results['onenote_pages'] += 1
+                    print(f"  ✓ 页面 {i+1}/{page_count} 创建成功: {page_title}")
+                    if 'notebook' in result:
+                        print(f"    笔记本: {result['notebook']}")
+                    if 'section' in result:
+                        print(f"    分区: {result['section']}")
+                else:
+                    results['failed'] += 1
+                    print(f"  ✗ 页面 {i+1}/{page_count} 创建失败: {result.get('error', '')[:50]}")
+                await asyncio.sleep(random.uniform(1, 2))
         else:
             print(f"\n[7/10] 跳过 OneNote 页面创建")
 
@@ -815,18 +991,20 @@ class WorkspaceActivityManager:
             results['failed'] += 1
             print(f"  ✗ 访问失败: {result.get('error', '')[:50]}")
 
-        # 9. 上传 SharePoint 文件（50% 概率）
-        if random.choice([True, False]):
-            print(f"\n[9/10] 上传 SharePoint 文件")
-            file_name = f"doc_{random.randint(100000, 999999)}.txt"
-            result = await self.upload_sharepoint_file(file_name)
-            if result['success']:
-                results['sharepoint_files'] += 1
-                print(f"  ✓ 文件上传成功: {file_name}")
-            else:
-                results['failed'] += 1
-                print(f"  ✗ 文件上传失败: {result.get('error', '')[:50]}")
-            await asyncio.sleep(random.uniform(1, 3))
+        # 9. 上传 SharePoint 文件（60% 概率，1-2 个）
+        if random.randint(1, 10) <= 6:
+            file_count = random.randint(1, 2)
+            print(f"\n[9/10] 上传 SharePoint 文件（{file_count} 个）")
+            for i in range(file_count):
+                file_name = f"doc_{random.randint(100000, 999999)}.txt"
+                result = await self.upload_sharepoint_file(file_name)
+                if result['success']:
+                    results['sharepoint_files'] += 1
+                    print(f"  ✓ 文件 {i+1}/{file_count} 上传成功: {file_name}")
+                else:
+                    results['failed'] += 1
+                    print(f"  ✗ 文件 {i+1}/{file_count} 上传失败: {result.get('error', '')[:50]}")
+                await asyncio.sleep(random.uniform(1, 2))
         else:
             print(f"\n[9/10] 跳过文件上传")
 
@@ -845,7 +1023,7 @@ class WorkspaceActivityManager:
             print(f"\n[清理] 开始清理旧数据...")
 
             # 清理邮件
-            result = await self.delete_old_emails(5)
+            result = await self.delete_old_emails(8)
             if result['success'] and result['deleted'] > 0:
                 results['emails_deleted'] = result['deleted']
                 print(f"  ✓ 删除邮件: {result['deleted']} 封")
@@ -853,7 +1031,7 @@ class WorkspaceActivityManager:
             await asyncio.sleep(random.uniform(1, 2))
 
             # 清理日历事件
-            result = await self.delete_old_events(3)
+            result = await self.delete_old_events(5)
             if result['success'] and result['deleted'] > 0:
                 results['events_deleted'] = result['deleted']
                 print(f"  ✓ 删除事件: {result['deleted']} 个")
@@ -869,15 +1047,15 @@ class WorkspaceActivityManager:
             await asyncio.sleep(random.uniform(1, 2))
 
             # 清理 OneNote 页面
-            result = await self.delete_onenote_pages(2)
+            result = await self.delete_onenote_pages(5)
             if result['success'] and result['deleted'] > 0:
                 results['onenote_pages_deleted'] = result['deleted']
-                print(f"  ✓ 删除页面: {result['deleted']} 个")
+                print(f"  ✓ 删除 OneNote 页面: {result['deleted']} 个")
 
             await asyncio.sleep(random.uniform(1, 2))
 
             # 清理文件
-            result = await self.delete_old_files(3)
+            result = await self.delete_old_files(5)
             if result['success'] and result['deleted'] > 0:
                 results['files_deleted'] = result['deleted']
                 print(f"  ✓ 删除文件: {result['deleted']} 个")
