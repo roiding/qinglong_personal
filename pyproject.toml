@@ -8,6 +8,7 @@ dependencies = [
     "azure-identity>=1.25.0",
     "msgraph-sdk>=1.47.0",
     "python-dotenv>=1.0.0",
+    "Pillow>=10.0.0",
 ]
 
 [project.optional-dependencies]
